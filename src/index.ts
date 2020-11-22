@@ -1,5 +1,6 @@
-let a: number = 123;
+import Crawler from "./crawler";
+import Analyzer1 from './analyzer1'
 
-const h1 = document.createElement("h1");
-h1.innerHTML = "Hello, I am Lison";
-document.body.appendChild(h1);
+const url=`http://e.vhall.com/category/4`;
+const analyzer1=Analyzer1.getInstance();
+new Crawler(url,analyzer1);
