@@ -14,6 +14,10 @@ type Method =
   | 'patch'
   | 'PATCH';
 
+interface WebRequestTransformer {
+  (data: any, headers: any): any;
+}
+
 interface WebRequestConfig {
   url?: string;
   method?: Method;
@@ -22,6 +26,10 @@ interface WebRequestConfig {
   headers?: any;
   responseType?: XMLHttpRequestResponseType;
   timeout?: number;
+  transformRequest?: WebRequestTransformer | WebRequestTransformer[];
+  transformResponse?: WebRequestTransformer | WebRequestTransformer[];
+
+  [propName: string]: any;
 }
 
 interface WebRequestResponse<T = any> {
@@ -43,6 +51,11 @@ interface WebRequestError extends Error {
   response?: WebRequestResponse;
 }
 interface WebRequest {
+  defaults: WebRequestConfig;
+  interceptors: {
+    request: WebRequestInterceptorManager<WebRequestConfig>;
+    response: WebRequestInterceptorManager<WebRequestResponse>;
+  };
   request<T = any>(config: WebRequestConfig): WebRequestPromise<T>;
   get<T = any>(url: string, config?: WebRequestConfig): WebRequestPromise<T>;
   delete<T = any>(url: string, config?: WebRequestConfig): WebRequestPromise<T>;
@@ -58,11 +71,32 @@ interface WebRequestInstance extends WebRequest {
   <T = any>(url: string, config?: WebRequestConfig): WebRequestPromise<T>;
 }
 
+interface ResloveFn<T> {
+  (val: T): T | Promise<T>;
+}
+
+interface RejectFn {
+  (error: any): any;
+}
+interface WebRequestInterceptorManager<T> {
+  use(resolve: ResloveFn<T>, rejected?: RejectFn): number;
+  eject(id: number): void;
+}
+
+interface WebRequestStatic extends WebRequestInstance {
+  create(config?: WebRequestConfig): WebRequestInstance;
+}
+
 export {
   Method,
   WebRequestConfig,
   WebRequestResponse,
   WebRequestPromise,
   WebRequestError,
-  WebRequestInstance
+  WebRequestInstance,
+  WebRequestInterceptorManager,
+  ResloveFn,
+  RejectFn,
+  WebRequestTransformer,
+  WebRequestStatic
 };

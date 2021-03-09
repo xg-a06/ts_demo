@@ -9,7 +9,10 @@ function isObject(val: any): val is Object {
 }
 
 function isPlainObject(val: any): val is Object {
-  return toString.call(val) === '[object Object]';
+  if (typeof val !== 'object' || val === null) {
+    return false;
+  }
+  return Object.getPrototypeOf(val) === Object.prototype;
 }
 
 function extend<T, U>(to: T, from: U): T & U {
@@ -19,4 +22,25 @@ function extend<T, U>(to: T, from: U): T & U {
   return to as T & U;
 }
 
-export { isDate, isObject, isPlainObject, extend };
+function deepMerge(...args: any[]): any {
+  const ret = Object.create(null);
+  args.forEach(obj => {
+    if (obj) {
+      Object.entries(obj).forEach(([k, v]) => {
+        if (isPlainObject(v)) {
+          if (isPlainObject(ret[k])) {
+            ret[k] = deepMerge(ret[k], v);
+          } else {
+            ret[k] = deepMerge(v);
+          }
+        } else {
+          ret[k] = v;
+        }
+      });
+    }
+  });
+
+  return ret;
+}
+
+export { isDate, isObject, isPlainObject, extend, deepMerge };

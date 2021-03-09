@@ -2,7 +2,8 @@ import { WebRequestConfig, WebRequestPromise, WebRequestResponse } from '../type
 import xhr from './xhr';
 import { analysisURL } from '../utils/url';
 import { transformRequest, transformResponse } from '../utils/data';
-import { processHeaders } from '../utils/headers';
+import { processHeaders, flattenHeaders } from '../utils/headers';
+import transform from './transform';
 
 function webRequest(config: WebRequestConfig): WebRequestPromise {
   processConfig(config);
@@ -13,8 +14,8 @@ function webRequest(config: WebRequestConfig): WebRequestPromise {
 
 function processConfig(config: WebRequestConfig): void {
   config.url = transformURL(config);
-  config.headers = transformHeasers(config);
-  config.data = transformRequestData(config);
+  config.data = transform(config.data, config.headers, config.transformRequest);
+  config.headers = flattenHeaders(config.headers, config.method!);
 }
 
 function transformURL(config: WebRequestConfig): string {
@@ -22,18 +23,8 @@ function transformURL(config: WebRequestConfig): string {
   return analysisURL(url!, params);
 }
 
-function transformRequestData(config: WebRequestConfig): any {
-  const { data } = config;
-  return transformRequest(data);
-}
-
-function transformHeasers(config: WebRequestConfig): any {
-  const { headers = {}, data } = config;
-  return processHeaders(headers, data);
-}
-
 function transformResponseData(res: WebRequestResponse): WebRequestResponse {
-  res.data = transformResponse(res.data);
+  res.data = transform(res.data, res.headers, res.config.transformResponse);
   return res;
 }
 

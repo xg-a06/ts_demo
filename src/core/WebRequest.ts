@@ -1,7 +1,36 @@
-import { WebRequestPromise, WebRequestConfig, Method } from '../types';
+import {
+  WebRequestPromise,
+  WebRequestConfig,
+  Method,
+  WebRequestResponse,
+  ResloveFn,
+  RejectFn
+} from '../types';
 import dispatchRequest from './dispatchRequest';
+import InterceptorManager from './InterceptorManager';
+import mergeConfig from './mergeConfig';
+
+interface Interceptors {
+  request: InterceptorManager<WebRequestConfig>;
+  response: InterceptorManager<WebRequestResponse>;
+}
+
+interface PromiseChain<T> {
+  resolved: ResloveFn<T> | ((config: WebRequestConfig) => WebRequestPromise);
+  rejected?: RejectFn;
+}
 
 class WebRequest {
+  defaults: WebRequestConfig;
+  interceptors: Interceptors;
+
+  constructor(initConfig: WebRequestConfig) {
+    this.defaults = initConfig;
+    this.interceptors = {
+      request: new InterceptorManager<WebRequestConfig>(),
+      response: new InterceptorManager<WebRequestResponse>()
+    };
+  }
   request(url: string, config?: WebRequestConfig): WebRequestPromise;
   request(config: WebRequestConfig): WebRequestPromise;
   request(url: any, config: any = {}): WebRequestPromise {
@@ -10,7 +39,31 @@ class WebRequest {
     } else {
       config = url;
     }
-    return dispatchRequest(config);
+
+    config = mergeConfig(this.defaults, config);
+
+    const chain: PromiseChain<any>[] = [
+      {
+        resolved: dispatchRequest,
+        rejected: undefined
+      }
+    ];
+
+    this.interceptors.request.forEach(interceptors => {
+      chain.unshift(interceptors);
+    });
+
+    this.interceptors.response.forEach(interceptors => {
+      chain.push(interceptors);
+    });
+
+    let promise = Promise.resolve(config);
+
+    while (chain.length) {
+      const { resolved, rejected } = chain.shift()!;
+      promise = promise.then(resolved, rejected);
+    }
+    return promise;
   }
   _requestMethodWithoutData(method: Method, url: string, config?: WebRequestConfig) {
     let conf = Object.assign({}, config, { method, url });
